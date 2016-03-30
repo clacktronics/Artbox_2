@@ -26,49 +26,85 @@ def allPWM(value):
 		led.pwm(value)
 
 def setPWM(input):
-    assert len(input) == 8
+    global trigcheck
+    global trig_time
 
     for i,val in enumerate(input):
-        out = val * 10
+        out = int(val) * 10
         if out == 90: out = 100
         pin[i].pwm(out)
+
+        # As its slow check for more triggers whilst writing pins
+        if adc1.read() > 50 and (micros() - trig_time) >= 500000:
+            trigcheck = True
+            print('blip')
+            trig_time = micros()
+            return
 
 allPWM(0)
 i = 1
 loop_strt = 0
-onLoop = False
+onLoop = True
 loop = -1
 loopCount = 0
+played = 0
+sname = 'not set'
 
 step_time = micros()
+trig_time = micros()
 wait_for_trig = True
+trigcheck = False
 
 if __name__ == "__main__":
 
     seq = sequence()
 
     while True:
-        if adc1.read() > 600:
+
+        if adc1.read() > 50 and (micros() - trig_time) >= 500000 or trigcheck:
             wait_for_trig = False
-        if (micros() - step_time) >= 54000 and not wait_for_trig:
-        #sleep( 0.054)
-            step = seq.getStep(i).strip().replace(' ','')
+
+            loopCount+=1
+
+            if loopCount >= loop:
+                onLoop = False
+                loopCount = 0
+
+            if onLoop:
+                i = loop_strt+1
+                print("%d of %d" % (loopCount+1, loop))
+            else:
+                step = seq.getStep(i).replace(' ','')[:-1]
+                while step[:3] != "seq":
+                    i+=1
+                    step = seq.getStep(i).replace(' ','')[:-1]
+                    #print('seek',i)
+                sname = step
+                loop_strt = i
+                onLoop = True
+                i+=1
+                print(sname)
+
+            trigcheck = False
+            trig_time = micros()
+
+
+        if (micros() - step_time) >= 56500 and not wait_for_trig:
+
+            step = seq.getStep(i).replace(' ','')[:-1]
+
             if step[:3] == "seq":
-                if not onLoop:
-                    loop_strt = i
-                    onLoop = True
-                    loopCount = 0
-                elif onLoop:
-                    i = loop_strt
-                    loopCount += 1
-                    if loopCount >= loop-1:
-                        onLoop = False
-                    wait_for_trig = True
+                wait_for_trig = True
+                #sname = step
+                continue
+
             elif step[:4] == "loop":
                 loop = int(step[5:])
+                i += 1
+                continue
+
             else:
-                step = [int(pin) for pin in step]
+                #print(i,loop,sname,step)
                 setPWM(step)
-            print(loopCount, step)
-            i += 1
-            step_time = micros()
+                i += 1
+                step_time = micros()
