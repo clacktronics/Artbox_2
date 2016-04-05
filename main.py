@@ -1,4 +1,4 @@
-from pyb import UART, micros
+from pyb import UART, millis
 from pwm import ledpwm
 from time import sleep
 from seq_reader import sequence
@@ -8,16 +8,22 @@ adc1 = pyb.ADC('X22')
 GreenF = 150
 step = 0
 
+
+hi = 400
+mid = 100
+bass = 50
+kick = 25
+
 pin = [
 
-  	ledpwm('Y1',8,1,GreenF),
-	ledpwm('Y6',1,1,GreenF), #inv
- 	ledpwm('Y2',8,2,GreenF),
- 	ledpwm('Y12',1,3,GreenF),
- 	ledpwm('X3',9,1,GreenF),
- 	ledpwm('X6',0,0,GreenF),
-	ledpwm('X5',0,0,GreenF),
- 	ledpwm('Y11',1,2,GreenF) #inv
+  	ledpwm('Y1',8,1,kick),
+	ledpwm('Y6',1,1,hi), #inv
+ 	ledpwm('Y2',8,2,mid),
+ 	ledpwm('Y12',1,3,bass),
+ 	ledpwm('X3',9,1,kick),
+ 	ledpwm('X6',0,0,hi),
+	ledpwm('X5',0,0,mid),
+ 	ledpwm('Y11',1,2,bass) #inv
 ]
 
 
@@ -35,10 +41,10 @@ def setPWM(input):
         pin[i].pwm(out)
 
         # As its slow check for more triggers whilst writing pins
-        if adc1.read() > 50 and (micros() - trig_time) >= 500000:
+        if adc1.read() > 50 and (millis() - trig_time) >= 500:
             trigcheck = True
             print('blip')
-            trig_time = micros()
+            trig_time = millis()
             return
 
 allPWM(0)
@@ -50,18 +56,20 @@ loopCount = 0
 played = 0
 sname = 'not set'
 
-step_time = micros()
-trig_time = micros()
+step_time = millis()
+trig_time = millis()
 wait_for_trig = True
 trigcheck = False
 
 if __name__ == "__main__":
 
+    start = pyb.micros()
+
     seq = sequence()
 
     while True:
 
-        if adc1.read() > 50 and (micros() - trig_time) >= 500000 or trigcheck:
+        if adc1.read() > 50 and (millis() - trig_time) >= 600 or trigcheck:
             wait_for_trig = False
 
             loopCount+=1
@@ -75,6 +83,7 @@ if __name__ == "__main__":
                 print("%d of %d" % (loopCount+1, loop))
             else:
                 step = seq.getStep(i).replace(' ','')[:-1]
+                print('x', end="")
                 while step[:3] != "seq":
                     i+=1
                     step = seq.getStep(i).replace(' ','')[:-1]
@@ -86,10 +95,10 @@ if __name__ == "__main__":
                 print(sname)
 
             trigcheck = False
-            trig_time = micros()
+            trig_time = millis()
 
 
-        if (micros() - step_time) >= 56500 and not wait_for_trig:
+        if pyb.elapsed_micros(start) >= 55700 and not wait_for_trig:
 
             step = seq.getStep(i).replace(' ','')[:-1]
 
@@ -107,4 +116,4 @@ if __name__ == "__main__":
                 #print(i,loop,sname,step)
                 setPWM(step)
                 i += 1
-                step_time = micros()
+                start = pyb.micros()

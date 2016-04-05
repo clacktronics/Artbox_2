@@ -2,7 +2,7 @@ class sequence():
 
     def __init__(self):
         self.loops = {}
-        self.dataTxt = open("sequence.txt")
+        self.dataTxt = open("Emerging_Paradigm.txt")
         self.sequence = {}
         self.getSequence(self.dataTxt)
         self.length = len(self.sequence)
